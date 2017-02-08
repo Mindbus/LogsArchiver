@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using LogsArchiver.Filter;
 using LogsArchiver.Input;
+using LogsArchiver.Output;
 using Microsoft.Extensions.Configuration;
 
 namespace LogsArchiver
@@ -19,16 +21,78 @@ namespace LogsArchiver
                 .AddJsonFile("appSettings.json");
             Configuration = builder.Build();
             
-            const string prefix = "LogsArchiver.Input.";
-            var inputTypeName = prefix + Configuration["input:type"];
-            var type = Type.GetType(inputTypeName);
-            var input = (IInput)Activator.CreateInstance(type, Configuration);
+            var input = CreateSingleInstance<IInput>(Configuration, "input");
+            var filters = CreateMultipleInstances<IFilter>(Configuration, "filters").ToList();
+            var output = CreateSingleInstance<IOutput>(Configuration, "output");
 
-            var files = input.GetFiles().Result;
+            Run(input, filters, output).Wait();
+        }
+
+        private static async Task Run(IInput input, IEnumerable<IFilter> filters, IOutput output)
+        {
+            var files = await input.GetFiles();
+#if DEBUG
             foreach (var logFile in files)
             {
                 Console.WriteLine($"{logFile.FileName} - {logFile.TimeStamp}");
             }
+#endif
+
+            foreach (var filter in filters)
+            {
+                files = await filter.Filter(files);
+            }
+
+#if DEBUG
+            foreach (var logFile in files)
+            {
+                Console.WriteLine($"{logFile.FileName} - {logFile.TimeStamp}");
+            }
+#endif
+
+            foreach (var logFile in files)
+            {
+                await output.Archive(logFile);
+            }
+        }
+
+        private static T CreateSingleInstance<T>(IConfigurationRoot configuration, string configurationPrefix)
+        {
+            var objectType = typeof(T);
+            var namespacePrexif = objectType.Namespace;
+            var inputTypeName = namespacePrexif + "." + configuration[configurationPrefix + ":type"];
+            var type = Type.GetType(inputTypeName);
+            return (T)Activator.CreateInstance(type, configuration);
+        }
+
+        private static IEnumerable<T> CreateMultipleInstances<T>(IConfigurationRoot configuration, string configurationPrefix)
+        {
+            var objectType = typeof(T);
+            var namespacePrexif = objectType.Namespace;
+
+            var keys = GetKeysIfTheyExist(configuration, configurationPrefix, "type");
+
+            return keys.Select(key =>
+            {
+                var inputTypeName = namespacePrexif + "." + Configuration[key];
+                var type = Type.GetType(inputTypeName);
+                return (T) Activator.CreateInstance(type, Configuration);
+            });
+        }
+
+        private static IEnumerable<string> GetKeysIfTheyExist(IConfigurationRoot configuration, string configurationPrefix, string configurationsufix)
+        {
+            int index = 0;
+            do
+            {
+                var key = $"{configurationPrefix}:{index}:{configurationsufix}";
+                if (configuration[key] == null)
+                {
+                    break;
+                }
+                index++;
+                yield return key;
+            } while (true);
         }
     }
 }
