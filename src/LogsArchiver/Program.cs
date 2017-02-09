@@ -74,13 +74,13 @@ namespace LogsArchiver
 
             return keys.Select(key =>
             {
-                var inputTypeName = namespacePrexif + "." + Configuration[key];
+                var inputTypeName = namespacePrexif + "." + Configuration[key.Key];
                 var type = Type.GetType(inputTypeName);
-                return (T) Activator.CreateInstance(type, Configuration);
+                return (T) Activator.CreateInstance(type, Configuration, key.Index);
             });
         }
 
-        private static IEnumerable<string> GetKeysIfTheyExist(IConfigurationRoot configuration, string configurationPrefix, string configurationsufix)
+        private static IEnumerable<SettingKey> GetKeysIfTheyExist(IConfigurationRoot configuration, string configurationPrefix, string configurationsufix)
         {
             int index = 0;
             do
@@ -90,9 +90,15 @@ namespace LogsArchiver
                 {
                     break;
                 }
+                yield return new SettingKey { Index = index, Key = key };
                 index++;
-                yield return key;
             } while (true);
+        }
+
+        private struct SettingKey
+        {
+            public string Key { get; set; }
+            public int Index { get; set; }
         }
     }
 }
