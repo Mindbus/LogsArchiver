@@ -28,7 +28,7 @@ namespace LogsArchiver.Filter
                 {
                     archive.CreateEntryFromFile(logFile.FullPath, logFile.FileName);
                 }
-                list.Add(new LogFile {FullPath = zipFileName, FileName = logFile.FileName, TimeStamp = logFile.TimeStamp});
+                list.Add(new LogFile {FullPath = zipFileName, FileName = Path.GetFileName(zipFileName), TimeStamp = logFile.TimeStamp});
                 try
                 {
 #if !DEBUG
