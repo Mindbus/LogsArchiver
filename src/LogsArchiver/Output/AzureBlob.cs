@@ -34,6 +34,17 @@ namespace LogsArchiver.Output
             {
                 await blockBlob.UploadFromStreamAsync(fileStream);
             }
+
+            try
+            {
+#if !DEBUG
+                File.Delete(logFile.FullPath);
+#endif
+            }
+            catch
+            {
+                //soak it
+            }
         }
 
         private string GetRemotePath(LogFile logFile)
