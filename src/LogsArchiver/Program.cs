@@ -16,9 +16,21 @@ namespace LogsArchiver
 
         public static void Main(string[] args)
         {
+            var configFileName = "appSettings.json";
+            if (args.Length > 0)
+            {
+                var testConfigFile = args[0];
+                if (!File.Exists(testConfigFile))
+                {
+                    Console.WriteLine($"The specified config file {testConfigFile} doesn't exist or wasn't found");
+                    return;
+                }
+                configFileName = testConfigFile;
+            }
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appSettings.json");
+                .AddJsonFile(configFileName);
             Configuration = builder.Build();
             
             var input = CreateSingleInstance<IInput>(Configuration, "input");
@@ -37,7 +49,6 @@ namespace LogsArchiver
                 Console.WriteLine($"{logFile.FileName} - {logFile.TimeStamp}");
             }
 #endif
-
             foreach (var filter in filters)
             {
                 files = await filter.Filter(files);
