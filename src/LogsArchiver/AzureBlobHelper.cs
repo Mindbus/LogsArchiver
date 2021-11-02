@@ -1,16 +1,15 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
+﻿using Azure.Storage.Blobs;
+using Microsoft.Extensions.Configuration;
 
 namespace LogsArchiver
 {
     public class AzureBlobHelper
     {
-        public static CloudBlobClient GetClient(IConfigurationRoot configuration, string configprefix)
+        public static BlobContainerClient GetClient(IConfigurationRoot configuration, string configprefix, string containerName)
         {
             var connectionString = configuration[configprefix + ":connectionString"];
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(connectionString);
-            return storageAccount.CreateCloudBlobClient();
+            var client = new BlobContainerClient(connectionString, containerName);
+            return client;
         }
     }
 }
